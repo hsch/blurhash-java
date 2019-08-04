@@ -4,10 +4,6 @@ plugins {
     id "signing"
 }
 
-group = "io.trbl"
-archivesBaseName = "blurhash"
-version = "1.0.0"
-
 repositories {
     mavenCentral()
 }
@@ -37,33 +33,31 @@ signing {
 uploadArchives {
     repositories {
         mavenDeployer {
-
-            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
+            beforeDeployment {
+                MavenDeployment deployment -> signing.signPom(deployment)
+            }
             repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
                 authentication(userName: ossrhUsername, password: ossrhPassword)
             }
-
             pom.project {
-
+                group = "io.trbl"
+                artifactId = "blurhash"
+                archivesBaseName = "blurhash"
+                version = "1.0.0"
                 name "BlurHash for Java"
                 description "A BlurHash encoder implementation in Java"
                 url "https://github.com/hsch/blurhash-java"
-                packaging "jar"
-
                 scm {
+                    url "https://github.com/hsch/blurhash-java"
                     connection "scm:git:https://github.com/hsch/blurhash-java.git"
                     developerConnection "scm:git:git@github.com:hsch/blurhash-java.git"
-                    url "https://github.com/hsch/blurhash-java"
                 }
-
                 licenses {
                     license {
-                        name "MIT License"
+                        name "MIT"
                         url "https://opensource.org/licenses/MIT"
                     }
                 }
-
                 developers {
                     developer {
                         id "hendrik"
