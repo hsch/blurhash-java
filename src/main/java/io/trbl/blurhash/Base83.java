@@ -16,12 +16,16 @@ final class Base83 {
 
     static String encode(long value, int length) {
         char[] buffer = new char[length];
+        encode(value, length, buffer, 0);
+        return new String(buffer);
+    }
+
+    static void encode(long value, int length, char[] buffer, int offset) {
         int exp = 1;
         for (int i = 1; i <= length; i++, exp *= 83) {
             int digit = (int)(value / exp % 83);
-            buffer[length - i] = ALPHABET[digit];
+            buffer[offset + length - i] = ALPHABET[digit];
         }
-        return new String(buffer);
     }
 
     static int decode(String value) {

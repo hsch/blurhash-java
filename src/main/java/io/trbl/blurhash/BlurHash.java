@@ -9,24 +9,25 @@ import static io.trbl.blurhash.Utils.*;
  */
 public final class BlurHash {
 
-    @FunctionalInterface
-    private interface BasisFunction {
-        double apply(int x, int y);
-    }
-
-    private static double[] multiplyBasisFunction(int[] pixels, int width, int height, BasisFunction basisFunction) {
+    private static void applyBasisFunction(int[] pixels, int width, int height,
+                                           double normalisation, int i, int j,
+                                           double[][] factors, int index) {
         double r = 0, g = 0, b = 0;
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
+                double basis = normalisation
+                               * Math.cos((Math.PI * i * x) / width)
+                               * Math.cos((Math.PI * j * y) / height);
                 int pixel = pixels[y * width + x];
-                double basis = basisFunction.apply(x, y);
                 r += basis * sRGBToLinear((pixel >> 16) & 0xff);
                 g += basis * sRGBToLinear((pixel >> 8)  & 0xff);
                 b += basis * sRGBToLinear( pixel        & 0xff);
             }
         }
         double scale = 1.0 / (width * height);
-        return new double[]{ r * scale, g * scale, b * scale };
+        factors[index][0] = r * scale;
+        factors[index][1] = g * scale;
+        factors[index][2] = b * scale;
     }
 
     private static long encodeDC(double[] value) {
@@ -70,7 +71,7 @@ public final class BlurHash {
     /**
      * Calculates the blur hash from the given pixels.
      *
-     * @param pixels width * height pixels, encoded as RGB integer (0xAARRGGBB)
+     * @param pixels width * height pixels, encoded as RGB integers (0xAARRGGBB)
      * @param width width of the bitmap
      * @param height height of the bitmap
      * @param componentX number of components in the x dimension
@@ -86,42 +87,39 @@ public final class BlurHash {
             throw new IllegalArgumentException("Width and height must match the pixels array");
         }
 
-        double[][] factors = new double[componentX * componentY][];
-        for (int y = 0; y < componentY; y++) {
-            for (int x = 0; x < componentX; x++) {
-                double normalisation = x == 0 && y == 0 ? 1 : 2;
-                double cx = x, cy = y;
-                BasisFunction basisFunction = (i, j) -> normalisation
-                                                        * Math.cos((Math.PI * cx * i) / width)
-                                                        * Math.cos((Math.PI * cy * j) / height);
-                double[] factor = multiplyBasisFunction(pixels, width, height, basisFunction);
-                factors[y * componentX + x] = factor;
+        double[][] factors = new double[componentX * componentY][3];
+        for (int j = 0; j < componentY; j++) {
+            for (int i = 0; i < componentX; i++) {
+                double normalisation = i == 0 && j == 0 ? 1 : 2;
+                applyBasisFunction(pixels, width, height,
+                        normalisation, i, j,
+                        factors, j * componentX + i);
             }
         }
 
-        String hash = "";
+        char[] hash = new char[1 + 1 + 4 + 2 * (factors.length - 1)]; // size flag + max AC + DC + 2 * AC components
 
         long sizeFlag = componentX - 1 + (componentY - 1) * 9;
-        hash += Base83.encode(sizeFlag, 1);
+        Base83.encode(sizeFlag, 1, hash, 0);
 
         double maximumValue;
         if (factors.length > 1) {
             double actualMaximumValue = max(factors, 1, factors.length);
             double quantisedMaximumValue = Math.floor(Math.max(0, Math.min(82, Math.floor(actualMaximumValue * 166 - 0.5))));
             maximumValue = (quantisedMaximumValue + 1) / 166;
-            hash += Base83.encode(Math.round(quantisedMaximumValue), 1);
+            Base83.encode(Math.round(quantisedMaximumValue), 1, hash, 1);
         } else {
             maximumValue = 1;
-            hash += Base83.encode(0, 1);
+            Base83.encode(0, 1, hash, 1);
         }
 
         double[] dc = factors[0];
-        hash += Base83.encode(encodeDC(dc), 4);
+        Base83.encode(encodeDC(dc), 4, hash, 2);
 
         for (int i = 1; i < factors.length; i++) {
-            hash += Base83.encode(encodeAC(factors[i], maximumValue), 2);
+            Base83.encode(encodeAC(factors[i], maximumValue), 2, hash, 6 + 2 * (i - 1));
         }
-        return hash;
+        return new String(hash);
     }
 
     private BlurHash() {
