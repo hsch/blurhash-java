@@ -46,7 +46,7 @@ Most information is available here:
 - https://central.sonatype.org/pages/gradle.html
 - https://central.sonatype.org/pages/working-with-pgp-signatures.html
 
-Some additional tipps and tricks might be needed.
+Some additional tips and tricks might be needed.
 
 Note that with recent GPG versions,
 you might need to export the secret keyring to a local file:
@@ -54,7 +54,7 @@ you might need to export the secret keyring to a local file:
 gpg --export-secret-keys > secring.gpg
 ```
 
-Find your key ID like so:
+Find your key ID:
 ```
 gpg --list-secret-keys --keyid-format 0xSHORT
 ```
@@ -69,7 +69,7 @@ Make sure your key is available on a public server:
 gpg --keyserver keyserver.ubuntu.com --send-keys ...
 ```
 
-Finally, upload a package like so:
+Finally, upload the package to staging like so:
 ```
 ./gradlew clean uploadArchives
 ```
@@ -77,6 +77,8 @@ Finally, upload a package like so:
 Manage staging repositories here:
 - https://oss.sonatype.org
 - https://issues.sonatype.org/
+
+Remember that releasing the package is done by closing the staging repository.
 
 ## MIT License
 
